@@ -10,7 +10,8 @@ import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.serialization.jackson.*
-import java.io.IOException
+
+class JsonPlaceholderServiceException(message: String, cause: Throwable? = null) : Exception(message, cause)
 
 class JsonPlaceholderService {
     private val client = HttpClient(CIO) {
@@ -31,77 +32,32 @@ class JsonPlaceholderService {
     
     private val baseUrl = "https://jsonplaceholder.typicode.com"
     
-    suspend fun getAllPosts(): Result<List<Post>> {
-        return try {
-            val response: List<Post> = client.get("$baseUrl/posts").body()
-            Result.success(response)
-        } catch (e: ResponseException) {
-            Result.failure(Exception("HTTP error: ${e.response.status}"))
-        } catch (e: IOException) {
-            Result.failure(Exception("Network error: ${e.message}"))
-        } catch (e: Exception) {
-            Result.failure(Exception("Unexpected error: ${e.message}"))
-        }
+    suspend fun getAllPosts(): List<Post> {
+        return client.get("$baseUrl/posts").body()
     }
     
-    suspend fun getCommentsByUserId(userId: Int): Result<List<Comment>> {
-        return try {
-            val response: List<Comment> = client.get("$baseUrl/comments") {
-                parameter("userId", userId)
-            }.body()
-            Result.success(response)
-        } catch (e: ResponseException) {
-            Result.failure(Exception("HTTP error: ${e.response.status}"))
-        } catch (e: IOException) {
-            Result.failure(Exception("Network error: ${e.message}"))
-        } catch (e: Exception) {
-            Result.failure(Exception("Unexpected error: ${e.message}"))
-        }
+    suspend fun getCommentsByUserId(userId: Int): List<Comment> {
+        return client.get("$baseUrl/comments") {
+            parameter("userId", userId)
+        }.body()
     }
     
-    suspend fun createPost(post: Post): Result<Post> {
-        return try {
-            val response: Post = client.post("$baseUrl/posts") {
-                contentType(ContentType.Application.Json)
-                setBody(post)
-            }.body()
-            Result.success(response)
-        } catch (e: ResponseException) {
-            Result.failure(Exception("HTTP error: ${e.response.status}"))
-        } catch (e: IOException) {
-            Result.failure(Exception("Network error: ${e.message}"))
-        } catch (e: Exception) {
-            Result.failure(Exception("Unexpected error: ${e.message}"))
-        }
+    suspend fun createPost(post: Post): Post {
+        return client.post("$baseUrl/posts") {
+            contentType(ContentType.Application.Json)
+            setBody(post)
+        }.body()
     }
     
-    suspend fun updatePost(postId: Int, post: Post): Result<Post> {
-        return try {
-            val response: Post = client.put("$baseUrl/posts/$postId") {
-                contentType(ContentType.Application.Json)
-                setBody(post)
-            }.body()
-            Result.success(response)
-        } catch (e: ResponseException) {
-            Result.failure(Exception("HTTP error: ${e.response.status}"))
-        } catch (e: IOException) {
-            Result.failure(Exception("Network error: ${e.message}"))
-        } catch (e: Exception) {
-            Result.failure(Exception("Unexpected error: ${e.message}"))
-        }
+    suspend fun updatePost(postId: Int, post: Post): Post {
+        return client.put("$baseUrl/posts/$postId") {
+            contentType(ContentType.Application.Json)
+            setBody(post)
+        }.body()
     }
     
-    suspend fun deletePost(postId: Int): Result<Unit> {
-        return try {
-            client.delete("$baseUrl/posts/$postId")
-            Result.success(Unit)
-        } catch (e: ResponseException) {
-            Result.failure(Exception("HTTP error: ${e.response.status}"))
-        } catch (e: IOException) {
-            Result.failure(Exception("Network error: ${e.message}"))
-        } catch (e: Exception) {
-            Result.failure(Exception("Unexpected error: ${e.message}"))
-        }
+    suspend fun deletePost(postId: Int) {
+        client.delete("$baseUrl/posts/$postId")
     }
     
     fun close() {

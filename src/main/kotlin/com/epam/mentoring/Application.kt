@@ -2,12 +2,18 @@ package com.epam.mentoring
 
 import com.epam.mentoring.models.Post
 import com.epam.mentoring.services.JsonPlaceholderService
+import com.epam.mentoring.services.JsonPlaceholderServiceException
+import com.fasterxml.jackson.core.JsonParseException
 import io.ktor.http.*
+import io.ktor.serialization.*
 import io.ktor.serialization.jackson.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.*
+import io.ktor.server.plugins.statuspages.*
+import io.ktor.client.plugins.*
+import io.ktor.server.plugins.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -21,8 +27,50 @@ fun Application.main() {
 
 fun Application.module() {
     // Install the ContentNegotiation feature with Jackson for JSON serialization
-    install(ContentNegotiation) {
-        jackson()
+    try {
+        install(ContentNegotiation) {
+            jackson()
+        }
+    } catch (e: Exception) {
+        // Plugin is already installed, ignore the error
+    }
+
+    // Install Status Pages for centralized error handling
+    try {
+        install(StatusPages) {
+            exception<JsonPlaceholderServiceException> { call, cause ->
+                call.respond(
+                    status = HttpStatusCode.InternalServerError,
+                    message = mapOf("error" to (cause.message ?: "An error occurred"))
+                )
+            }
+            exception<ResponseException> { call, cause ->
+                call.respond(
+                    status = HttpStatusCode.fromValue(cause.response.status.value),
+                    message = mapOf("error" to "HTTP error: ${cause.response.status}")
+                )
+            }
+            exception<IllegalArgumentException> { call, cause ->
+                call.respond(
+                    status = HttpStatusCode.BadRequest,
+                    message = mapOf("error" to (cause.message ?: "Bad request"))
+                )
+            }
+            exception<BadRequestException> { call, cause ->
+                call.respond(
+                    status = HttpStatusCode.BadRequest,
+                    message = mapOf("error" to (cause.message ?: "Invalid request format"))
+                )
+            }
+            exception<Exception> { call, cause ->
+                call.respond(
+                    status = HttpStatusCode.InternalServerError,
+                    message = mapOf("error" to (cause.message ?: "An unexpected error occurred"))
+                )
+            }
+        }
+    } catch (e: Exception) {
+        // Plugin is already installed, ignore the error
     }
     
     // Create an instance of JsonPlaceholderService
@@ -39,90 +87,43 @@ fun Application.module() {
         route("/api") {
             // Get all posts
             get("/posts") {
-                jsonPlaceholderService.getAllPosts().fold(
-                    onSuccess = { posts ->
-                        call.respond(posts)
-                    },
-                    onFailure = { error ->
-                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to error.message))
-                    }
-                )
+                val posts = jsonPlaceholderService.getAllPosts()
+                call.respond(posts)
             }
             
             // Get comments by user ID
             get("/comments") {
                 val userId = call.request.queryParameters["userId"]?.toIntOrNull()
-                if (userId == null) {
-                    call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Missing or invalid userId parameter"))
-                    return@get
-                }
+                    ?: throw IllegalArgumentException("Missing or invalid userId parameter")
                 
-                jsonPlaceholderService.getCommentsByUserId(userId).fold(
-                    onSuccess = { comments ->
-                        call.respond(comments)
-                    },
-                    onFailure = { error ->
-                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to error.message))
-                    }
-                )
+                val comments = jsonPlaceholderService.getCommentsByUserId(userId)
+                call.respond(comments)
             }
             
             // Create a new post
             post("/posts") {
-                try {
-                    val post = call.receive<Post>()
-                    jsonPlaceholderService.createPost(post).fold(
-                        onSuccess = { createdPost ->
-                            call.respond(HttpStatusCode.Created, createdPost)
-                        },
-                        onFailure = { error ->
-                            call.respond(HttpStatusCode.InternalServerError, mapOf("error" to error.message))
-                        }
-                    )
-                } catch (e: Exception) {
-                    call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid post data: ${e.message}"))
-                }
+                val post = call.receive<Post>()
+                val createdPost = jsonPlaceholderService.createPost(post)
+                call.respond(HttpStatusCode.Created, createdPost)
             }
             
             // Update an existing post
             put("/posts/{id}") {
                 val id = call.parameters["id"]?.toIntOrNull()
-                if (id == null) {
-                    call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid post ID"))
-                    return@put
-                }
+                    ?: throw IllegalArgumentException("Invalid post ID")
                 
-                try {
-                    val post = call.receive<Post>()
-                    jsonPlaceholderService.updatePost(id, post).fold(
-                        onSuccess = { updatedPost ->
-                            call.respond(updatedPost)
-                        },
-                        onFailure = { error ->
-                            call.respond(HttpStatusCode.InternalServerError, mapOf("error" to error.message))
-                        }
-                    )
-                } catch (e: Exception) {
-                    call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid post data: ${e.message}"))
-                }
+                val post = call.receive<Post>()
+                val updatedPost = jsonPlaceholderService.updatePost(id, post)
+                call.respond(updatedPost)
             }
             
             // Delete a post
             delete("/posts/{id}") {
                 val id = call.parameters["id"]?.toIntOrNull()
-                if (id == null) {
-                    call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid post ID"))
-                    return@delete
-                }
+                    ?: throw IllegalArgumentException("Invalid post ID")
                 
-                jsonPlaceholderService.deletePost(id).fold(
-                    onSuccess = {
-                        call.respond(HttpStatusCode.NoContent)
-                    },
-                    onFailure = { error ->
-                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to error.message))
-                    }
-                )
+                jsonPlaceholderService.deletePost(id)
+                call.respond(HttpStatusCode.NoContent)
             }
         }
     }

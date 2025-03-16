@@ -8,15 +8,16 @@
     <name>ktor</name>
     <description>ktor</description>
     <properties>
-        <ktor.version>2.3.13</ktor.version>
-        <ktor-tests.version>2.3.13</ktor-tests.version>
+        <ktor.version>2.3.9</ktor.version>
+        <ktor-tests.version>2.3.9</ktor-tests.version>
         <kotlin.code.style>official</kotlin.code.style>
-        <kotlin.version>2.1.0</kotlin.version>
+        <kotlin.version>1.9.22</kotlin.version>
         <logback.version>1.5.17</logback.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <kotlin.compiler.incremental>true</kotlin.compiler.incremental>
         <main.class>com.epam.mentoring.ApplicationKt</main.class>
         <jackson.version>2.16.1</jackson.version>
+        <kotlinx-coroutines.version>1.8.0</kotlinx-coroutines.version>
     </properties>
     <repositories>
         <repository>
@@ -47,6 +48,11 @@
         <dependency>
             <groupId>io.ktor</groupId>
             <artifactId>ktor-server-content-negotiation-jvm</artifactId>
+            <version>${ktor.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.ktor</groupId>
+            <artifactId>ktor-server-status-pages-jvm</artifactId>
             <version>${ktor.version}</version>
         </dependency>
         
@@ -99,9 +105,21 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>io.ktor</groupId>
+            <artifactId>ktor-client-mock-jvm</artifactId>
+            <version>${ktor.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
             <artifactId>kotlin-test-junit</artifactId>
             <version>${kotlin.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.jetbrains.kotlinx</groupId>
+            <artifactId>kotlinx-coroutines-test</artifactId>
+            <version>${kotlinx-coroutines.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
